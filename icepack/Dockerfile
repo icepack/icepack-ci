@@ -9,3 +9,5 @@ RUN apt-get update && apt-get -yq install \
     libnetcdf13 \
     libnetcdf-dev
 
+ENV C_INCLUDE_PATH=/usr/include/gdal \
+    CPLUS_INCLUDE_PATH=/usr/include/gdal
