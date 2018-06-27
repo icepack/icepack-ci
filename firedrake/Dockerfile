@@ -16,5 +16,5 @@ ENV C_INCLUDE_PATH=/usr/include/gdal \
     CPLUS_INCLUDE_PATH=/usr/include/gdal
 
 RUN curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/master/scripts/firedrake-install && \
-    PETSC_CONFIGURE_OPTIONS="--download-suitesparse" python3 firedrake-install --verbose --disable-ssh
+    PETSC_CONFIGURE_OPTIONS="--download-suitesparse" python3 firedrake-install --verbose --disable-ssh --minimal-petsc
 
