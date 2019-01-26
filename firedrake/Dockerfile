@@ -1,4 +1,5 @@
-FROM buildpack-deps:stretch
+ARG BASE_IMAGE=buildpack-deps:stretch
+FROM $BASE_IMAGE
 
 MAINTAINER shapero.daniel@gmail.com
 
@@ -7,7 +8,6 @@ RUN apt-get update && apt-get -yq install \
     gfortran \
     libgdal20 \
     libgdal-dev \
-    libnetcdf11 \
     libnetcdf-dev \
     libopenmpi-dev \
     openmpi-bin \
