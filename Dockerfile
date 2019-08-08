@@ -4,6 +4,7 @@ FROM $BASE_IMAGE
 MAINTAINER shapero.daniel@gmail.com
 
 RUN apt-get update && apt-get -yq install \
+    binutils \
     cmake \
     gfortran \
     libgdal20 \

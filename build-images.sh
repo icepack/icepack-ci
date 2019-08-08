@@ -1,2 +1,2 @@
-docker build --tag icepack/firedrake:stretch --build-arg BASE_IMAGE=buildpack-deps:stretch firedrake/
-docker build --tag icepack/firedrake:buster --build-arg BASE_IMAGE=buildpack-deps:buster firedrake/
+docker build --tag icepack/firedrake-python3.5:0.1.0 --build-arg BASE_IMAGE=buildpack-deps:stretch --file Dockerfile .
+docker build --tag icepack/firedrake-python3.7:0.1.0 --build-arg BASE_IMAGE=buildpack-deps:buster --file Dockerfile .
