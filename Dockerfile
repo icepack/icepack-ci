@@ -5,7 +5,10 @@ MAINTAINER shapero.daniel@gmail.com
 
 RUN apt-get update && apt-get -yq install \
     binutils \
+    bison \
+    build-essential \
     cmake \
+    flex \
     gfortran \
     libgdal20 \
     libgdal-dev \
