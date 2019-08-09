@@ -34,9 +34,17 @@ WORKDIR /home/user
 ENV C_INCLUDE_PATH=/usr/include/gdal \
     CPLUS_INCLUDE_PATH=/usr/include/gdal
 
+# Put all the firedrake installation options, including commit hashes for all
+# dependencies, into a file.
+ADD package-branches /home/user/package-branches
+RUN echo '--verbose --disable-ssh --minimal-petsc --no-package-manager' \
+    $(sed 's/^/--package-branch /' package-branches | tr '\n' ' ') \
+    > install-options
+
 # Install firedrake.
-RUN curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/master/scripts/firedrake-install && \
-    PETSC_CONFIGURE_OPTIONS="--download-suitesparse" python3 firedrake-install --verbose --disable-ssh --minimal-petsc --no-package-manager
+RUN curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/$(grep "firedrake" /home/user/package-branches | cut -d' ' -f2)/scripts/firedrake-install
+ENV PETSC_CONFIGURE_OPTIONS="--download-suitesparse"
+RUN python3 firedrake-install $(cat install-options)
 
 # Hack to activate the firedrake virtual environment.
 ENV PATH=/home/user/firedrake/bin:$PATH
