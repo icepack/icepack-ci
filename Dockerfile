@@ -10,11 +10,9 @@ RUN apt-get update && apt-get -yq install \
     cmake \
     flex \
     gfortran \
-    libgdal20 \
     libgdal-dev \
+    libmpich-dev \
     libnetcdf-dev \
-    libopenmpi-dev \
-    openmpi-bin \
     python3 \
     python3-pip \
     python3-tk \
