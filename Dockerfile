@@ -49,6 +49,5 @@ RUN python3 firedrake-install $(cat install-options)
 # Hack to activate the firedrake virtual environment.
 ENV PATH=/home/user/firedrake/bin:$PATH
 
-RUN pip3 install \
-    rasterio \
-    scipy
+RUN pip3 install scipy
+RUN pip3 install rasterio==1.0.26
