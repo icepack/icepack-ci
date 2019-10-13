@@ -48,4 +48,4 @@ RUN python3 firedrake-install $(cat install-options)
 ENV PATH=/home/user/firedrake/bin:$PATH
 
 RUN pip3 install scipy
-RUN pip3 install rasterio==1.0.26
+RUN pip3 install rasterio==1.0.28
