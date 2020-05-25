@@ -1,9 +1,9 @@
-ARG BASE_IMAGE=buildpack-deps:stretch
+ARG BASE_IMAGE=buildpack-deps:20.04
 FROM $BASE_IMAGE
 
 MAINTAINER shapero.daniel@gmail.com
 
-RUN apt-get update && apt-get -yq install \
+RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -yq install \
     binutils \
     bison \
     build-essential \
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get -yq install \
     libnetcdf-dev \
     libxcursor1 \
     libxinerama1 \
+    python \
     python3 \
     python3-pip \
     python3-tk \
