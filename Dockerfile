@@ -12,7 +12,6 @@ RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -yq install \
     gfortran \
     libgdal-dev \
     libglu1-mesa \
-    libmpich-dev \
     libnetcdf-dev \
     libxcursor1 \
     libxinerama1 \
