@@ -10,7 +10,7 @@ Rather than recompile firedrake and its dependencies every time we need to test 
 This repository contains the scripts for building this docker image.
 If you want to use the Docker image, you can download it from [DockerHub](https://hub.docker.com/r/icepack/) instead of building it yourself by running
 
-    docker pull icepack/firedrake-python3.7:<tag>
+    docker pull icepack/firedrake-python3.8:<tag>
 
 where `<tag>` is the version of the image.
 
@@ -24,7 +24,7 @@ The same infrastructure could also be used to:
 
 ### Versioning
 
-This repo builds two docker images using python-3.5 and python-3.7.
+This repo builds two docker images using python-3.6 and python-3.8.
 These are the oldest and newest supported versions of python.
 The purpose of testing on an old version of python is to keep from using fancy new features (like f-strings) that not all users will have.
 The purpose of testing on a new version of python is so that we can remove usage of language or library features that will be deprecated in new versions.
@@ -55,6 +55,21 @@ Same as above, but sync a directory on your system with a directory in the conta
     docker run --interactive --tty \
         --volume </path/on/host>:</path/on/container> \
         <image name> bash
+
+##### Jupyter
+
+To run a Jupyter notebook server from inside a container, you need to forward ports from the container to the host using the `publish` argument:
+
+    docker run --interactive --tty \
+        --publish 8888:8888 <image name> bash
+
+From inside the container, you also have to pass a few different arguments when starting the notebook server:
+
+    jupyter notebook --ip 0.0.0.0 --no-browser
+
+The server will print a bunch of things, at the end of which will be a URL that starts with `http://127.0.0.1:8888/?token=<very long hex string>`.
+If you paste that URL into your browser you should have access from your host system to the notebook server that's running in the container.
+You can replace 8888 with the port number of your choice, which you might need to do if some other application is using it.
 
 ##### Introspection and debugging
 
