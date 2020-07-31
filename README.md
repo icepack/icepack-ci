@@ -41,7 +41,7 @@ So this approach partly helps with reproducibility but is not a complete solutio
 
 Build a docker image from a `Dockerfile` in a given directory:
 
-    docker build --tage <username>/<image name>:<image version tag> <directory of Dockerfile>
+    docker build --tag <username>/<image name>:<image version tag> <directory of Dockerfile>
 
 Start a container interactively so you can run commands at a terminal inside it:
 
