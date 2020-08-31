@@ -25,11 +25,11 @@ RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -yq install \
 # Run as a non-root user with sudo privileges.
 RUN echo "Defaults lecture = never" >> /etc/sudoers.d/privacy
 RUN echo "ALL            ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
-RUN useradd --create-home --shell /bin/bash --password $(openssl passwd -1 password) user
-RUN usermod --append --groups sudo user
+RUN useradd --create-home --shell /bin/bash --password $(openssl passwd -1 password) sermilik
+RUN usermod --append --groups sudo sermilik
 
-USER user
-WORKDIR /home/user
+USER sermilik
+WORKDIR /home/sermilik
 
 # GDAL installs its headers in a location that it can't find later.
 ENV C_INCLUDE_PATH=/usr/include/gdal \
@@ -42,18 +42,22 @@ RUN curl -O http://gmsh.info/bin/Linux/gmsh-4.5.6-Linux64.tgz && \
 
 # Put all the firedrake installation options, including commit hashes for all
 # dependencies, into a file.
-ADD package-branches /home/user/package-branches
-RUN echo '--verbose --disable-ssh --minimal-petsc --no-package-manager' \
-    $(sed 's/^/--package-branch /' package-branches | tr '\n' ' ') \
-    > install-options
+COPY package-branches ./package-branches
+RUN echo $(sed 's/^/--package-branch /' package-branches | tr '\n' ' ') \
+    > package-branch-options
 
 # Install firedrake.
-RUN curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/$(grep "firedrake" /home/user/package-branches | cut -d' ' -f2)/scripts/firedrake-install
-ENV PETSC_CONFIGURE_OPTIONS="--download-suitesparse"
-RUN python3 firedrake-install $(cat install-options)
+RUN curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/$(grep "firedrake" ./package-branches | cut -d' ' -f2)/scripts/firedrake-install
+RUN python3 firedrake-install \
+    --verbose \
+    --disable-ssh \
+    --minimal-petsc \
+    --no-package-manager \
+    --remove-build-files \
+    $(cat package-branch-options)
 
 # Hack to activate the firedrake virtual environment.
-ENV PATH=/home/user/firedrake/bin:$PATH
+ENV PATH=/home/sermilik/firedrake/bin:$PATH
 
 RUN pip3 install scipy
 RUN pip3 install rasterio==1.0.28
