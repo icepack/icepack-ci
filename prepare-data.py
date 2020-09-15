@@ -1,23 +1,73 @@
 import numpy as np
 import geojson
 import xarray
+import rasterio
+from rasterio.windows import Window, window_index
 import icepack
 
-# Fetch the outline of Larsen and compute a bounding box
-outline_filename = icepack.datasets.fetch_larsen_outline()
-with open(outline_filename, 'r') as outline_file:
-    outline = geojson.load(outline_file)
+def complement(window, shape):
+    r"""Return windows describing the set complement or outside of a window"""
+    (rowmin, rowmax), (colmin, colmax) = window_index(window)
+    windows = [
+        Window.from_slices((0, rowmax), (colmin, colmax)),
+        Window.from_slices((rowmin, rowmax), (0, colmax)),
+        Window.from_slices((rowmin, shape[0]), (colmin, colmax)),
+        Window.from_slices((rowmin, rowmax), (colmin, shape[1]))
+    ]
+    return [w for w in windows if w.width != 0 and w.height != 0]
 
-coords = np.array(list(geojson.utils.coords(outline)))
-xmin, xmax = coords[:, 0].min(), coords[:, 0].max()
-ymin, ymax = coords[:, 1].min(), coords[:, 1].max()
 
-delta = 10e3
+measures_filename = icepack.datasets.fetch_measures_antarctica()
+
+outline_filenames = [
+    icepack.datasets.fetch_larsen_outline()
+]
+
+with rasterio.open(f'netcdf:{measures_filename}:VX', 'r') as dataset:
+    windows = [Window.from_slices((0, dataset.shape[0]), (0, dataset.shape[1]))]
+    for filename in outline_filenames:
+        with open(filename, 'r') as outline_file:
+            outline = geojson.load(outline_file)
+
+        coords = np.array(list(geojson.utils.coords(outline)))
+        xmin, xmax = coords[:, 0].min(), coords[:, 0].max()
+        ymin, ymax = coords[:, 1].min(), coords[:, 1].max()
+
+        delta = 10e3
+
+        rowmin, colmin = dataset.index(xmin - delta, ymax + delta)
+        rowmax, colmax = dataset.index(xmax + delta, ymin - delta)
+
+        window_interior = Window.from_slices((rowmin, rowmax), (colmin, colmax))
+        windows_exterior = complement(window_interior, dataset.shape)
+
+        new_windows = []
+        for w1 in windows_exterior:
+            for w2 in windows:
+                w = w1.intersection(w2)
+                if w.shape[0] != 0 and w.shape[1] != 0:
+                    new_windows.append(w)
+
+        windows = new_windows
+
+import matplotlib.pyplot as plt
+fig, axes = plt.figure()
+a = np.zeros(dataset.shape)
+for window in windows:
+    (rowmin, rowmax), (colmin, colmax) = window_index(window)
+    a[rowmin:rowmax, colmin:colmax] = 1.
+axes.imshow(a)
+fig.show()
 
 # Fetch the MEaSUREs ice velocities and extract the region around Larsen
-measures_filename = icepack.datasets.fetch_measures_antarctica()
-dataset = xarray.open_dataset(measures_filename)
-output_dataset = dataset[['VX', 'VY', 'ERRX', 'ERRY']].sel(
-    x=slice(xmin - delta, xmax + delta), y=slice(ymax - delta, ymin + delta)
-)
-output_dataset.to_netcdf('measures.nc')
+dataset = xarray.open_dataset(measures_filename, chunks={'x': 1000, 'y': 1000})
+keys = ['VX', 'VY', 'ERRX', 'ERRY']
+
+for key in keys:
+    for window in windows:
+        pass
+
+exit()
+
+encoding = {key: {'zlib': True, 'complevel': 9} for key in keys}
+dataset.to_netcdf('measures.nc', encoding=encoding)
