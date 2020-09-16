@@ -7,12 +7,13 @@ import icepack
 
 def complement(window, shape):
     r"""Return windows describing the set complement or outside of a window"""
-    (rowmin, rowmax), (colmin, colmax) = window_index(window)
+    rowmin, colmin = window.row_off, window.col_off
+    rowmax, colmax = rowmin + window.height, colmin + window.width
     windows = [
-        Window.from_slices((0, rowmax), (colmin, colmax)),
-        Window.from_slices((rowmin, rowmax), (0, colmax)),
-        Window.from_slices((rowmin, shape[0]), (colmin, colmax)),
-        Window.from_slices((rowmin, rowmax), (colmin, shape[1]))
+        Window.from_slices((0, rowmax), (0, colmin)),
+        Window.from_slices((rowmax, shape[0]), (0, colmax)),
+        Window.from_slices((rowmin, shape[0]), (colmax, shape[1])),
+        Window.from_slices((0, rowmin), (colmin, shape[1]))
     ]
     return [w for w in windows if w.width != 0 and w.height != 0]
 
@@ -45,19 +46,19 @@ with rasterio.open(f'netcdf:{measures_filename}:VX', 'r') as dataset:
         for w1 in windows_exterior:
             for w2 in windows:
                 w = w1.intersection(w2)
-                if w.shape[0] != 0 and w.shape[1] != 0:
+                if w.height != 0 and w.width != 0:
                     new_windows.append(w)
 
         windows = new_windows
 
 import matplotlib.pyplot as plt
-fig, axes = plt.figure()
+fig, axes = plt.subplots()
 a = np.zeros(dataset.shape)
 for window in windows:
-    (rowmin, rowmax), (colmin, colmax) = window_index(window)
-    a[rowmin:rowmax, colmin:colmax] = 1.
+    rowslice, colslice = window_index(window)
+    a[rowslice, colslice] = 1.
 axes.imshow(a)
-fig.show()
+plt.show()
 
 # Fetch the MEaSUREs ice velocities and extract the region around Larsen
 dataset = xarray.open_dataset(measures_filename, chunks={'x': 1000, 'y': 1000})
