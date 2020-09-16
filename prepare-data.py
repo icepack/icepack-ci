@@ -19,7 +19,6 @@ def complement(window, shape):
 
 
 measures_filename = icepack.datasets.fetch_measures_antarctica()
-
 outline_filenames = [
     icepack.datasets.fetch_larsen_outline()
 ]
@@ -51,24 +50,16 @@ with rasterio.open(f'netcdf:{measures_filename}:VX', 'r') as dataset:
 
         windows = new_windows
 
-import matplotlib.pyplot as plt
-fig, axes = plt.subplots()
-a = np.zeros(dataset.shape)
-for window in windows:
-    rowslice, colslice = window_index(window)
-    a[rowslice, colslice] = 1.
-axes.imshow(a)
-plt.show()
-
 # Fetch the MEaSUREs ice velocities and extract the region around Larsen
-dataset = xarray.open_dataset(measures_filename, chunks={'x': 1000, 'y': 1000})
-keys = ['VX', 'VY', 'ERRX', 'ERRY']
+to_drop = ('STDX', 'STDY', 'CNT', 'SOURCE')
+chunks = {'x': 1000, 'y': 1000}
+dataset = xarray.open_dataset(measures_filename).drop(to_drop)
 
+keys = ['VX', 'VY', 'ERRX', 'ERRY']
 for key in keys:
     for window in windows:
-        pass
+        rowslice, colslice = window_index(window)
+        dataset[key][rowslice, colslice] = np.nan
 
-exit()
-
-encoding = {key: {'zlib': True, 'complevel': 9} for key in keys}
-dataset.to_netcdf('measures.nc', encoding=encoding)
+encoding = {'zlib': True, 'complevel': 9}
+dataset.to_netcdf('measures.nc', encoding={key: encoding for key in keys})
