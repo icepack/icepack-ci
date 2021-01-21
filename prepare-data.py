@@ -1,65 +1,72 @@
-import numpy as np
+import argparse
 import geojson
-import xarray
-import rasterio
-from rasterio.windows import Window, window_index
+import numpy as np
 import icepack
-
-def complement(window, shape):
-    r"""Return windows describing the set complement or outside of a window"""
-    rowmin, colmin = window.row_off, window.col_off
-    rowmax, colmax = rowmin + window.height, colmin + window.width
-    windows = [
-        Window.from_slices((0, rowmax), (0, colmin)),
-        Window.from_slices((rowmax, shape[0]), (0, colmax)),
-        Window.from_slices((rowmin, shape[0]), (colmax, shape[1])),
-        Window.from_slices((0, rowmin), (colmin, shape[1]))
-    ]
-    return [w for w in windows if w.width != 0 and w.height != 0]
+import tqdm
+import xarray
 
 
-measures_filename = icepack.datasets.fetch_measures_antarctica()
-outline_filenames = [
-    icepack.datasets.fetch_larsen_outline()
-]
+glacier_names = ['larsen', 'pine-island']
+outlines = []
+for name in glacier_names:
+    filename = icepack.datasets.fetch_outline(name)
+    with open(filename, 'r') as outline_file:
+        outline = geojson.load(outline_file)
+        outlines.append(outline)
 
-with rasterio.open(f'netcdf:{measures_filename}:VX', 'r') as dataset:
-    windows = [Window.from_slices((0, dataset.shape[0]), (0, dataset.shape[1]))]
-    for filename in outline_filenames:
-        with open(filename, 'r') as outline_file:
-            outline = geojson.load(outline_file)
 
-        coords = np.array(list(geojson.utils.coords(outline)))
-        xmin, xmax = coords[:, 0].min(), coords[:, 0].max()
-        ymin, ymax = coords[:, 1].min(), coords[:, 1].max()
+def bounding_box(outline, delta=5e3):
+    coords = np.array(list(geojson.utils.coords(outline)))
+    x, y = coords[:, 0], coords[:, 1]
+    return x.min() - delta, y.min() - delta, x.max() + delta, y.max() + delta
 
-        delta = 10e3
 
-        rowmin, colmin = dataset.index(xmin - delta, ymax + delta)
-        rowmax, colmax = dataset.index(xmax + delta, ymin - delta)
+def mask_data(dataset, outlines):
+    x = dataset.coords['x']
+    y = dataset.coords['y']
+    for name in tqdm.tqdm(dataset.keys()):
+        array = dataset[name].copy(deep=True)
+        if array.shape:
+            array[:, :] = np.nan
 
-        window_interior = Window.from_slices((rowmin, rowmax), (colmin, colmax))
-        windows_exterior = complement(window_interior, dataset.shape)
+            for outline in outlines:
+                xmin, ymin, xmax, ymax = bounding_box(outline)
+                xslice = x[(x >= xmin) & (x <= xmax)]
+                yslice = y[(y >= ymin) & (y <= ymax)]
+                selection = {'x': xslice, 'y': yslice}
+                array.loc[selection] = dataset[name].loc[selection]
 
-        new_windows = []
-        for w1 in windows_exterior:
-            for w2 in windows:
-                w = w1.intersection(w2)
-                if w.height != 0 and w.width != 0:
-                    new_windows.append(w)
+            dataset[name][:, :] = array[:, :]
 
-        windows = new_windows
 
-# Fetch the MEaSUREs ice velocities and extract the region around Larsen
-to_drop = ('STDX', 'STDY', 'CNT', 'SOURCE')
-chunks = {'x': 1000, 'y': 1000}
-dataset = xarray.open_dataset(measures_filename).drop(to_drop)
+# Fetch the MEaSUREs ice velocities and mask out everything except for Larsen C
+# Ice Shelf and Pine Island Glacier
+# NOTE: The MEaSUREs velocity dataset stores the lat/lon coordinates of each
+# grid point as 64-bit floats; dropping these fields shrinks the size of the
+# output file by a factor of 5.
+filename = icepack.datasets.fetch_measures_antarctica()
+measures = xarray.open_dataset(filename).drop(['lat', 'lon'])
+mask_data(measures, outlines)
 
-keys = ['VX', 'VY', 'ERRX', 'ERRY']
-for key in keys:
-    for window in windows:
-        rowslice, colslice = window_index(window)
-        dataset[key][rowslice, colslice] = np.nan
+# Same but for BedMachine
+filename = icepack.datasets.fetch_bedmachine_antarctica()
+bedmachine = xarray.open_dataset(filename)
+mask_data(bedmachine, outlines)
 
-encoding = {'zlib': True, 'complevel': 9}
-dataset.to_netcdf('measures.nc', encoding={key: encoding for key in keys})
+# Write everything out to NetCDF
+enc = {
+    'zlib': True,
+    'shuffle': True,
+    'complevel': 1,
+    'fletcher32': False,
+    'contiguous': False,
+    'chunksizes': (768, 768),
+}
+measures.to_netcdf(
+    'measures.nc',
+    encoding={key: enc for key in measures.keys() if measures[key].shape}
+)
+bedmachine.to_netcdf(
+    'bedmachine.nc',
+    encoding={key: enc for key in bedmachine.keys() if bedmachine[key].shape}
+)
