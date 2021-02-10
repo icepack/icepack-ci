@@ -1,27 +1,22 @@
-import argparse
+import os
 import geojson
+import hashlib
 import numpy as np
 import icepack
 import tqdm
 import xarray
 
 
-glacier_names = ['larsen', 'pine-island']
-outlines = []
-for name in glacier_names:
-    filename = icepack.datasets.fetch_outline(name)
-    with open(filename, 'r') as outline_file:
-        outline = geojson.load(outline_file)
-        outlines.append(outline)
-
-
 def bounding_box(outline, delta=5e3):
+    r"""Get a bounding box for a GeoJSON object with some extra padding"""
     coords = np.array(list(geojson.utils.coords(outline)))
     x, y = coords[:, 0], coords[:, 1]
     return x.min() - delta, y.min() - delta, x.max() + delta, y.max() + delta
 
 
 def mask_data(dataset, outlines):
+    r"""Mask out every value in an xarray dataset for points outside the input
+    set of outlines"""
     x = dataset.coords['x']
     y = dataset.coords['y']
     for name in tqdm.tqdm(dataset.keys()):
@@ -39,18 +34,38 @@ def mask_data(dataset, outlines):
             dataset[name][:, :] = array[:, :]
 
 
-# Fetch the MEaSUREs ice velocities and mask out everything except for Larsen C
-# Ice Shelf and Pine Island Glacier
+def sha256sum(filename, blocksize=65536):
+    r"""Compute the SHA256 hash of a file on disk"""
+    checksum = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for block in iter(lambda: f.read(blocksize), b''):
+            checksum.update(block)
+
+    return checksum.hexdigest()
+
+
+# Fetch the outlines of the glaciers (Larsen and Pine Island) for which we want
+# to have data in the Docker image.
+glacier_names = ['larsen', 'pine-island']
+outlines = []
+for name in glacier_names:
+    filename = icepack.datasets.fetch_outline(name)
+    with open(filename, 'r') as outline_file:
+        outline = geojson.load(outline_file)
+        outlines.append(outline)
+
+# Fetch the MEaSUREs ice velocities and mask out everything except for the
+# glaciers we're testing on.
 # NOTE: The MEaSUREs velocity dataset stores the lat/lon coordinates of each
 # grid point as 64-bit floats; dropping these fields shrinks the size of the
 # output file by a factor of 5.
-filename = icepack.datasets.fetch_measures_antarctica()
-measures = xarray.open_dataset(filename).drop(['lat', 'lon'])
+measures_pathname = icepack.datasets.fetch_measures_antarctica()
+measures = xarray.open_dataset(measures_pathname).drop(['lat', 'lon'])
 mask_data(measures, outlines)
 
 # Same but for BedMachine
-filename = icepack.datasets.fetch_bedmachine_antarctica()
-bedmachine = xarray.open_dataset(filename)
+bedmachine_pathname = icepack.datasets.fetch_bedmachine_antarctica()
+bedmachine = xarray.open_dataset(bedmachine_pathname)
 mask_data(bedmachine, outlines)
 
 # Write everything out to NetCDF
@@ -62,11 +77,22 @@ enc = {
     'contiguous': False,
     'chunksizes': (768, 768),
 }
+measures_filename = os.path.basename(measures_pathname)
 measures.to_netcdf(
-    'measures.nc',
+    measures_filename,
     encoding={key: enc for key in measures.keys() if measures[key].shape}
 )
+bedmachine_filename = os.path.basename(bedmachine_pathname)
 bedmachine.to_netcdf(
-    'bedmachine.nc',
+    bedmachine_filename,
     encoding={key: enc for key in bedmachine.keys() if bedmachine[key].shape}
 )
+
+# Create a new registry file with the new SHA256 checksums for the smaller data
+registry = icepack.datasets.nsidc_data.registry
+registry[bedmachine_filename] = sha256sum(bedmachine_filename)
+registry[measures_filename] = sha256sum(measures_filename)
+
+with open('registry-nsidc.txt', 'w') as registry_file:
+    for filename, checksum in registry.items():
+        registry_file.write(f'{filename} {checksum}\n')
