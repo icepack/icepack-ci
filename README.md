@@ -34,6 +34,12 @@ These commit hashes are then passed to the Firedrake install script when the Doc
 The Firedrake install script can build specific versions of a set of key dependencies (loopy, UFL, and so forth), but not the dependencies of dependencies.
 So this approach partly helps with reproducibility but is not a complete solution.
 
+Periodically, we have to update the list of package branches.
+A handy shell command to generate this file is:
+
+    for dir in $VIRTUAL_ENV/src/*; do test -d $dir && printf '%s %s\n' $(basename $dir) $(git -C $dir rev-parse HEAD) || continue; done > package-branches
+
+This assumes that you've first activated the Firedrake virtual environment.
 
 ### Docker cheat sheet
 
