@@ -54,21 +54,7 @@ for name in glacier_names:
         outline = geojson.load(outline_file)
         outlines.append(outline)
 
-# Fetch the MEaSUREs ice velocities and mask out everything except for the
-# glaciers we're testing on.
-# NOTE: The MEaSUREs velocity dataset stores the lat/lon coordinates of each
-# grid point as 64-bit floats; dropping these fields shrinks the size of the
-# output file by a factor of 5.
-measures_pathname = icepack.datasets.fetch_measures_antarctica()
-measures = xarray.open_dataset(measures_pathname).drop(['lat', 'lon'])
-mask_data(measures, outlines)
-
-# Same but for BedMachine
-bedmachine_pathname = icepack.datasets.fetch_bedmachine_antarctica()
-bedmachine = xarray.open_dataset(bedmachine_pathname)
-mask_data(bedmachine, outlines)
-
-# Write everything out to NetCDF
+# Parameters for writing everything out to NetCDF
 enc = {
     'zlib': True,
     'shuffle': True,
@@ -77,16 +63,32 @@ enc = {
     'contiguous': False,
     'chunksizes': (768, 768),
 }
+
+# Fetch the MEaSUREs ice velocities and mask out everything except for the
+# glaciers we're testing on.
+# NOTE: The MEaSUREs velocity dataset stores the lat/lon coordinates of each
+# grid point as 64-bit floats; dropping these fields shrinks the size of the
+# output file by a factor of 5.
+measures_pathname = icepack.datasets.fetch_measures_antarctica()
 measures_filename = os.path.basename(measures_pathname)
-measures.to_netcdf(
-    measures_filename,
-    encoding={key: enc for key in measures.keys() if measures[key].shape}
-)
+if not os.path.exists(measures_filename):
+    measures = xarray.open_dataset(measures_pathname).drop(['lat', 'lon'])
+    mask_data(measures, outlines)
+    measures.to_netcdf(
+        measures_filename,
+        encoding={key: enc for key in measures.keys() if measures[key].shape}
+    )
+
+# Same but for BedMachine
+bedmachine_pathname = icepack.datasets.fetch_bedmachine_antarctica()
 bedmachine_filename = os.path.basename(bedmachine_pathname)
-bedmachine.to_netcdf(
-    bedmachine_filename,
-    encoding={key: enc for key in bedmachine.keys() if bedmachine[key].shape}
-)
+if not os.path.exists(bedmachine_filename):
+    bedmachine = xarray.open_dataset(bedmachine_pathname)
+    mask_data(bedmachine, outlines)
+    bedmachine.to_netcdf(
+        bedmachine_filename,
+        encoding={key: enc for key in bedmachine.keys() if bedmachine[key].shape}
+    )
 
 # Create a new registry file with the new SHA256 checksums for the smaller data
 registry = icepack.datasets.nsidc_data.registry
