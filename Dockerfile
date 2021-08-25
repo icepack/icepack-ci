@@ -59,6 +59,9 @@ RUN python3 firedrake-install \
 # Hack to activate the firedrake virtual environment.
 ENV PATH=/home/sermilik/firedrake/bin:$PATH
 
+# Another hack because OpenMP and OpenBLAS are silly.
+ENV OMP_NUM_THREADS=1
+
 # Install some dependencies and create a Jupyter kernel for the virtual environment
 RUN pip3 install ipykernel
 RUN python3 -m ipykernel install --user --name=firedrake
