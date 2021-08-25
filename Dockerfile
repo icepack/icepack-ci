@@ -54,6 +54,7 @@ RUN python3 firedrake-install \
     --minimal-petsc \
     --no-package-manager \
     --remove-build-files \
+    --with-blas=download \
     $(cat package-branch-options)
 
 # Hack to activate the firedrake virtual environment.
