@@ -70,6 +70,6 @@ RUN python3 -m ipykernel install --user --name=firedrake
 # Copy some real data into the Docker image
 COPY BedMachineAntarctica_2020-07-15_v02.nc .cache/icepack/BedMachineAntarctica_2020-07-15_v02.nc
 COPY antarctic_ice_vel_phase_map_v01.nc .cache/icepack/antarctic_ice_vel_phase_map_v01.nc
-COPY moa750_2009_hp1_v01.1.tif.gz .cache/icepack/moa750_2009_hp1_v01.1.tif.gz
+COPY moa750_2009_hp1_v02.0.tif.gz .cache/icepack/moa750_2009_hp1_v02.0.tif.gz
 COPY registry-nsidc.txt registry-nsidc.txt
 RUN sudo chown -R sermilik .cache/icepack/
