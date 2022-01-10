@@ -55,6 +55,7 @@ RUN python3 firedrake-install \
     --no-package-manager \
     --remove-build-files \
     --with-blas=download \
+    --slepc \
     $(cat package-branch-options)
 
 # Hack to activate the firedrake virtual environment.
