@@ -15,6 +15,7 @@ RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -yq install \
     libnetcdf-dev \
     libxcursor1 \
     libxinerama1 \
+    patchelf \
     python \
     python3 \
     python3-pip \
@@ -63,6 +64,9 @@ ENV PATH=/home/sermilik/firedrake/bin:$PATH
 
 # Another hack because OpenMP and OpenBLAS are silly.
 ENV OMP_NUM_THREADS=1
+
+# Install ROL
+RUN pip3 install roltrilinos==0.0.9 ROL==0.0.16
 
 # Install some dependencies and create a Jupyter kernel for the virtual environment
 RUN pip3 install ipykernel
