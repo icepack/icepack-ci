@@ -49,7 +49,7 @@ RUN echo $(sed 's/^/--package-branch /' package-branches | tr '\n' ' ') \
 
 # Install firedrake.
 RUN curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/$(grep "firedrake" ./package-branches | cut -d' ' -f2)/scripts/firedrake-install
-RUN python3 firedrake-install \
+RUN PETSC_CONFIGURE_OPTIONS="--with-zlib" python3 firedrake-install \
     --verbose \
     --disable-ssh \
     --minimal-petsc \
