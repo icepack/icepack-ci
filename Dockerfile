@@ -56,8 +56,6 @@ RUN PETSC_CONFIGURE_OPTIONS="--with-zlib" python3 firedrake-install \
     --remove-build-files \
     --with-blas=download \
     --slepc \
-    --pip-install wheel==0.37.0 \
-    --pip-install setuptools==59.8.0 \
     $(cat package-branch-options)
 
 # Hack to activate the firedrake virtual environment.
