@@ -11,6 +11,7 @@ RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -yq install \
     flex \
     gfortran \
     libgdal-dev \
+    libgl1 \
     libglu1-mesa \
     libnetcdf-dev \
     libxcursor1 \
